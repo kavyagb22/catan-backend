@@ -1,4 +1,5 @@
 from random import shuffle
+import math
 
 def generate_board(resources, number_of_resources, desert, number_of_deserts, extra_resources, setup):
     total_hexes = []
@@ -20,6 +21,72 @@ def generate_board(resources, number_of_resources, desert, number_of_deserts, ex
 
     return board_setup, rows
 
+def label_catan_hexes(rows):
+    vertex_map = []
+    vertex_counter = 3
+
+    # Top row exception
+    vertex_map.extend([
+        {0: [rows[0][0]]},
+        {1: [rows[0][1]]},
+        {2: [rows[0][2]]}
+    ])
+
+    mid_row = math.floor(len(rows) / 2)
+
+    # Process the board layout
+    for row in range(len(rows)):
+        # need to repeat twice to get all hexes for each row
+        for row_counter in range(2):
+            for i in range(len(rows[row]) + 1):
+                if row_counter == 0:  # Top row of vertices for the hex
+                    if i == 0:
+                        vertex_map.append({vertex_counter: [rows[row][i]]})
+                    elif i == len(rows[row]):
+                        adjacent = [rows[row][i - 1]]
+                        if row > mid_row:
+                            adjacent.insert(0, rows[row - 1][i])
+                        vertex_map.append({vertex_counter: adjacent})
+                    else:
+                        adjacent = [rows[row][i - 1], rows[row][i]]
+                        if row > mid_row:
+                            adjacent.insert(0, rows[row - 1][i])
+                        elif row > 0:
+                            adjacent.insert(0, rows[row - 1][i - 1])
+                        vertex_map.append({vertex_counter: adjacent})
+                else:  # Bottom row of vertices for the hex
+                    if row < mid_row:
+                        if i == 0:
+                            vertex_map.append({vertex_counter: [rows[row][i], rows[row + 1][i]]})
+                        elif i == len(rows[row]):
+                            vertex_map.append({vertex_counter: [rows[row][i - 1], rows[row + 1][i]]})
+                        else:
+                            vertex_map.append({vertex_counter: [rows[row][i - 1], rows[row][i], rows[row + 1][i]]})
+                    elif row < len(rows) - 1:
+                        if i == 0:
+                            vertex_map.append({vertex_counter: [rows[row][i]]})
+                        elif i == len(rows[row]):
+                            vertex_map.append({vertex_counter: [rows[row][i - 1]]})
+                        else:
+                            vertex_map.append({vertex_counter: [rows[row][i - 1], rows[row][i], rows[row + 1][i - 1]]})
+                    else:
+                        if i == 0:
+                            vertex_map.append({vertex_counter: [rows[row][i]]})
+                        elif i == len(rows[row]):
+                            vertex_map.append({vertex_counter: [rows[row][i - 1]]})
+                        else:
+                            vertex_map.append({vertex_counter: [rows[row][i - 1], rows[row][i]]})
+                vertex_counter += 1
+
+    # Bottom row exception
+    vertex_map.extend([
+        {vertex_counter: [rows[-1][0]]},
+        {vertex_counter + 1: [rows[-1][1]]},
+        {vertex_counter + 2: [rows[-1][2]]}
+    ])
+
+    return vertex_map
+
 def generate_spiral_order_of_hexes(rows, number_of_items):
     spiral_order = []
     top = 0
@@ -29,6 +96,7 @@ def generate_spiral_order_of_hexes(rows, number_of_items):
     right_most = -1
     most_right = 3
     most_left = 0
+    position_order = []
 
     # if there is place to move ahead and place to move at the bottom
     while  top <= bottom and left <= right and number_of_items > 0:
@@ -151,6 +219,9 @@ def generate_complete_board(number_of_players):
     board_setup, rows = generate_board(resources, number_of_resources, desert, number_of_deserts, extra_resource, setup)
 
     spiral_order = generate_spiral_order_of_hexes(rows, number_of_items)
+
+    labelled_hex = label_catan_hexes(rows)
+
     print(spiral_order)
 
     hex_assignment = assign_number_to_hexes(spiral_order, number_order)
@@ -168,4 +239,4 @@ def generate_complete_board(number_of_players):
         start_index = end_index
 
 
-    return hex_placement, setup
+    return hex_placement, setup, labelled_hex
